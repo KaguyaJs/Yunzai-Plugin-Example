@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    // ▶ 编译目标：现代 Node 环境
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+
+    // ▶ 输出 & 源码路径
+    "outDir": "./lib",
+    "rootDir": "./src",
+
+    // ▶ 类型定义
+    "types": [
+      "@kaguyajs/trss-yunzai-types"
+    ],
+
+    // ▶ 更宽松一些的类型约束
+    "strict": false,
+    "skipLibCheck": false, // 不再检查第三方声明文件类型
+
+    // ▶ 模块兼容性
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+
+    // ▶ 支持无后缀导入
+    // tsup + esbuild 会自动补全 .js/.ts，不需要写后缀
+    "allowImportingTsExtensions": false, // 禁止必须写 .js/.ts
+    "moduleDetection": "force", // 确保正确识别 ESM 导入
+
+    // ▶ 基础路径别名
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+
+    // ▶ 让 tsc 只负责语法检查，不做 emit（tsup 打包时用不到）
+    // "noEmit": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "lib"]
+}

@@ -1,0 +1,92 @@
+name: Build and Push to lib Branch
+
+on:
+  push:
+    branches:
+      - main # 只有 main 分支有新的 push 时才触发
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 必须设置此权限，才能允许 Actions 往仓库推送内容
+
+    steps:
+      - name: Checkout Yunzai code
+        uses: actions/checkout@v5
+        with:
+          repository: TimeRainStarSky/Yunzai
+        
+      # 1. 检出 main 分支代码 (包括完整历史记录)
+      - name: Checkout Plugin code
+        uses: actions/checkout@v5
+        with:
+          # 必须获取完整历史，以便在 lib 分支上创建新的提交，而不是强制推送
+          path: plugins/temp-plugin
+          fetch-depth: 0
+
+      # 2. 设置 Node.js 环境
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "23"
+          registry-url: https://registry.npmjs.org
+
+      # 3. 安装 pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: true # 运行 pnpm install
+
+      # 4. 运行构建命令
+      - name: Run pnpm build
+        run: |
+          cd plugins/temp-plugin
+          pnpm run build
+
+
+        # - lib/ (构建产物目录)
+        # - schema/ (构建产物目录)
+        # - resources/ (构建产物目录)
+        # - index.js (构建产物文件)
+        # - package.json (源文件，但您需要保留它)
+
+      # 5. 准备要提交到 lib 分支的文件
+      # 目标是：lib 分支的根目录应该只包含：lib/, schema/, resources/, index.js, package.json
+      # 因为 actions-gh-pages 默认会清空目标分支，所以我们需要将所有必要文件复制到一个临时目录
+      - name: Prepare Files for lib Branch
+        run: |
+          cd plugins/temp-plugin
+          # 创建一个临时目录用于构建产物
+          mkdir temp_lib_content
+
+          # 复制所有需要的文件到临时目录
+          cp -R lib temp_lib_content/
+          cp -R schema temp_lib_content/
+          cp -R resources temp_lib_content/
+          cp index.js temp_lib_content/
+          cp package.json temp_lib_content/
+          cp LICENSE temp_lib_content/
+          cp README.md temp_lib_content/
+
+      - name: Delete devDependencies
+        run: |
+          cd plugins/temp-plugin/temp_lib_content
+          pnpm pkg delete devDependencies
+
+      # 6. 推送构建产物到 lib 分支 (使用 action-gh-pages)
+      # 这个 Action 的关键在于它不会使用 git push --force, 而是创建一个新的提交
+      - name: Deploy to lib branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          # 这是 GitHub 默认提供的 Token，具有写入权限
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # 要推送到的目标分支
+          publish_branch: lib
+          # 包含要推送文件/目录的文件夹
+          publish_dir: plugins/temp-plugin/temp_lib_content
+          # 每次提交时保留历史记录
+          force_orphan: false
+          # 自定义提交信息
+          commit_message: "Build: ${{ github.event.head_commit.message }}"
